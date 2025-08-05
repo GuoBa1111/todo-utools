@@ -325,35 +325,35 @@ initTagDragAndDrop() {
 
       draggedItem = e.currentTarget;
       initialY = e.clientY;
+      isDragging = false;
+      hasMoved = false;
 
       // 过滤掉系统分类，获取真正的用户标签索引
       const category = draggedItem.dataset.category;
       const userTags = this.tags.filter(tag => tag && !['无标签', '星标', '今日截止', '已完成'].includes(tag.name));
       dragStartIndex = userTags.findIndex(tag => tag.name === category);
 
-      // 清除之前的计时器
-      clearTimeout(dragTimer);
-
-      // 设置长按计时器
-      dragTimer = setTimeout(() => {
-        isDragging = true;
-        draggedItem.classList.add('dragging-ready');
-        // 提高被拖动元素的层级
-        draggedItem.style.zIndex = '100';
-
-        // 长按后才绑定移动和释放事件到文档
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-        document.addEventListener('mouseleave', handleMouseUp);
-      }, 1000); // 1秒触发长按
+      // 立即绑定移动和释放事件到文档
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('mouseleave', handleMouseUp);
     };
 
     // 鼠标移动事件 - 处理拖动
     const handleMouseMove = (e) => {
-      if (!isDragging) return;
-
       // 阻止默认行为
       e.preventDefault();
+
+      // 检测是否有足够的位移来判断为拖动操作
+      if (!hasMoved && Math.abs(e.clientY - initialY) > 5) {
+        hasMoved = true;
+        isDragging = true;
+        draggedItem.classList.add('dragging-ready');
+        // 提高被拖动元素的层级
+        draggedItem.style.zIndex = '100';
+      }
+
+      if (!isDragging) return;
 
       // 获取所有可拖动的标签项
       const categoryItems = Array.from(document.querySelectorAll('.category-item.draggable'));
@@ -397,15 +397,12 @@ initTagDragAndDrop() {
 
     // 鼠标释放事件 - 结束拖动
     const handleMouseUp = () => {
-      // 清除计时器
-      clearTimeout(dragTimer);
-
       // 移除文档上的事件监听器
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('mouseleave', handleMouseUp);
 
-      if (isDragging) {
+      if (isDragging && hasMoved) {
         isDragging = false;
         draggedItem.classList.remove('dragging');
         draggedItem.classList.remove('dragging-ready');  // 移除拖拽准备状态类
@@ -426,6 +423,7 @@ initTagDragAndDrop() {
           this.renderTasks();
         }
       }
+      // 如果没有移动，则视为普通点击，不执行任何操作
     };
 
     // 初始设置
