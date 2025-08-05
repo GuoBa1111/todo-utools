@@ -1,0 +1,972 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Arial', sans-serif;
+}
+
+.app-container {
+    display: flex;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+.sidebar {
+    width: 25%;
+    background-color: #f5f5f5;
+    padding: 12px;  /* 减少内边距从20px到12px */
+    border-right: 1px solid #ddd;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    overflow: hidden; /* 改为隐藏整体滚动 */
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-fixed {
+    width: 100%;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 10px;
+}
+
+.sidebar-scrollable {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: none; /* 隐藏Firefox滚动条 */
+    margin-bottom: 10px;
+}
+
+.sidebar-scrollable::-webkit-scrollbar {
+    display: none; /* 隐藏Chrome、Safari等WebKit浏览器滚动条 */
+}
+
+.sidebar h2 {
+    font-size: 16px;  /* 减小标题字体大小 */
+    margin-bottom: 10px;  /* 减少标题底部间距 */
+}
+
+.task-content {
+    flex: 1;
+    padding: 15px;
+    margin-left: 25%;
+    height: 100vh; /* 恢复高度设置，但移除滚动条 */
+    overflow: hidden; /* 确保内容不会超出容器 */
+    scrollbar-width: none; /* 隐藏Firefox滚动条 */
+}
+
+.fixed-header {
+    position: sticky;
+    top: 0;
+    background-color: transparent; /* 保持透明背景 */
+    padding: 10px 0; /* 增加一些内边距 */
+}
+
+.task-list {
+    margin-top: 5px; /* 增加上边距，确保在固定栏下面 */
+    padding-bottom: 5px; /* 增加一些下边距，确保最后一个任务也能被看到 */
+    /* 调整滚动设置 */
+    max-height: calc(100vh - 80px); /* 调整计算方式，减去更多的边距 */
+    overflow-y: auto; /* 允许垂直滚动 */
+    scrollbar-width: none; /* 隐藏Firefox滚动条 */
+}
+.task-list::-webkit-scrollbar {
+    display: none; /* 隐藏Chrome、Safari等WebKit浏览器滚动条 */
+}
+.category-list {
+    margin-top: 10px;
+}
+
+.category-item.dragging {
+  opacity: 0.5;
+  background-color: #e0e0e0;
+  border: 1px dashed #999;
+}
+
+.category-item.dragging-ready {
+  cursor: grab;
+}
+
+.category-item.dragging-ready:active,
+.category-item.dragging {
+  cursor: grabbing;
+}
+
+.category-item {
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    background-color: white;
+    border-radius: 5px;
+    cursor: default;  /* 恢复默认鼠标样式 */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    transition: all 0.2s ease;
+}
+
+
+.category-item:not(.draggable) {
+    cursor: default;
+}
+
+.category-item:hover {
+  background-color: #f0f0f0;
+}
+
+.category-item span:first-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1;
+    margin-right: 8px;
+}
+
+.category-dot {
+    width: 14px;  /* 增加宽度从12px到14px */
+    height: 14px; /* 增加高度从12px到14px */
+    border-radius: 50%;
+    margin-right: 8px;
+    display: inline-block;
+    vertical-align: middle;
+    border: 1px solid #bbb; /* 加深边框颜色从#ddd到#bbb */
+}
+
+.sidebar {
+    width: 25%;
+    background-color: #f5f5f5;
+    padding: 12px;
+    border-right: 1px solid #ddd;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    overflow-y: auto;
+    scrollbar-width: none; /* 隐藏Firefox滚动条 */
+}
+
+.sidebar::-webkit-scrollbar {
+    display: none; /* 隐藏Chrome、Safari等WebKit浏览器滚动条 */
+}
+
+
+.category-item.active {
+    background-color: #4a90e2;
+    color: white;
+}
+
+/* 添加分隔线样式 */
+.category-divider {
+    height: 1px;
+    background-color: #ddd;
+    margin-top: 8px;
+    width: 100%;
+}
+
+.task-count {
+    background-color: #e0e0e0;
+    color: #333;
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-size: 12px;
+    flex-shrink: 0;
+    display: inline-block; /* 确保显示 */
+}
+
+.category-item.active .task-count {
+    background-color: white;
+    color: #4a90e2;
+}
+
+.sidebar-bottom {
+    width: 100%;
+    padding-top: 10px;
+    border-top: 1px solid #ddd;
+}
+
+/* 今日任务总结按钮样式 */
+.today-task-summary-btn {
+    width: 100%;
+    padding: 10px;  /* 减少内边距从12px到10px */
+    background-color: #f39c12;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px; 
+    margin-top: 0;
+}
+
+
+.task-item {
+    background-color: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+}
+
+.task-item.completed .task-title {
+    text-decoration: line-through;
+    color: #9e9e9e;
+}
+
+.task-item.completed .task-title .priority-tag {
+    text-decoration: none !important;
+}
+
+
+
+.task-checkbox {
+    margin-right: 15px;
+}
+
+.task-details {
+    flex: 1;
+    max-width: calc(100% - 120px);
+}
+
+.task-title {
+    font-size: 16px;
+    margin-bottom: 5px;
+    white-space: nowrap;  /* 防止文本换行 */
+    overflow: hidden;     /* 隐藏超出容器的文本 */
+    text-overflow: ellipsis;  /* 显示省略号 */
+}
+
+.task-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.task-notes {
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 8px;
+    white-space: nowrap;  /* 防止文本换行 */
+    overflow: hidden;     /* 隐藏超出容器的文本 */
+    text-overflow: ellipsis;  /* 显示省略号 */
+}
+
+.task-tags {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.tag {
+    background-color: #e0e0e0;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.task-duration {
+    font-size: 11px;
+    color: #666;
+}
+
+.task-actions {
+    display: flex;
+    gap: 5px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.task-item:hover .task-actions {
+    opacity: 1;
+}
+
+.edit-btn, .delete-btn {
+    width: 17px;
+    height: 17px;
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    padding: 0;
+}
+
+.edit-btn {
+    background-image: url('../pic/edit.png');
+}
+
+.delete-btn {
+    background-image: url('../pic/delete.png');
+    margin-left: 18px; /* 增加左边距来增大间距 */
+}
+
+
+/* 模态框样式 */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 99; /* 确保遮罩在内容之下但在其他元素之上 */
+}
+.modal-content {
+    background-color: white;
+    margin: 0 0 0 auto;
+    padding: 20px 20px 80px; /* 增加底部内边距到80px */
+    width: 90%;
+    max-width: 500px;
+    min-width: 300px;
+    height: 100vh;
+    overflow-y: auto;
+    scrollbar-width: none;
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 25%;
+    width: calc(100% - 25%);
+    max-width: none;
+    z-index: 100;
+}
+
+.modal-content::-webkit-scrollbar {
+    display: none;
+}
+
+/* 添加按钮容器样式 */
+.button-container {
+    display: flex;
+    justify-content: flex-end;
+    padding: 15px 0;
+    border-top: 1px solid #e0e0e0; /* 浅灰线 */
+    position: absolute; /* 改为绝对定位 */
+    bottom: 0; /* 距离底部0像素 */
+    right: 20px; /* 距离右侧20像素 */
+    left: 20px; /* 距离左侧20像素 */
+    background-color: white; /* 确保背景白色，覆盖下方内容 */
+}
+
+/* 调整按钮间距 */
+.cancel-btn {
+    margin-right: 10px !important;
+    background-color: #f1f1f1 !important;
+    color: #333 !important;
+    font-size: 14px !important; /* 减小字体大小 */
+}
+
+.cancel-btn:hover {
+    background-color: #9e9e9e !important; /* 悬停深灰色，亮度变暗 */
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.form-group.priority-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-group.priority-group label {
+    display: inline-block;
+    margin-bottom: 0;
+    width: 80px; /* 统一为80px宽度 */
+    white-space: nowrap;
+    text-align: right; /* 文字右对齐 */
+}
+
+.form-group.priority-group .priority-buttons {
+    margin-top: 0;
+    flex: 1;
+}
+/* 添加新的类用于内联标签 */
+.inline-label {
+    display: inline-block !important;
+    margin-bottom: 0 !important;
+}
+
+.form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.form-group input[type="datetime-local"],
+.form-group input[type="date"],
+.form-group input[type="time"] {
+    background-color: #f9f9f9;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.form-group input[type="datetime-local"]:focus,
+.form-group input[type="date"]:focus,
+.form-group input[type="time"]:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.2);
+    outline: none;
+}
+
+
+
+.tags-group {
+    display: flex;
+    gap: 15px;
+    margin-top: 8px;
+}
+
+.btn {
+    background-color: #1a56db;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px !important; /* 减小字体大小 */
+    transition: background-color 0.3s ease;
+}
+
+.btn:hover {
+    background-color: #60a5fa; /* 悬停发白，亮度变亮 */
+}
+
+.empty-state {
+    text-align: center;
+    padding: 50px 0;
+    color: #9e9e9e;
+    font-size: 18px;
+}
+
+/* 优先级样式 */
+.task-item.priority-极低 {
+    border-left: 4px solid #9e9e9e;
+}
+
+.task-item.priority-低 {
+    border-left: 4px solid #bbdefb;
+}
+
+.task-item.priority-中 {
+    border-left: 4px solid #ffeb3b;
+}
+
+.task-item.priority-高 {
+    border-left: 4px solid #ff9800;
+}
+
+.task-item.priority-极高 {
+    border-left: 4px solid #f44336;
+    background-color: #fff3f3;
+}
+
+/* 优先级标签样式 */
+.priority-tag {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: white;
+    margin-left: 10px;
+    display: inline-block; /* 确保它是一个块级元素，这样删除线就不会穿过它 */
+}
+
+.priority-tag.极低 {
+    background-color: #9e9e9e;
+}
+
+.priority-tag.低 {
+    background-color: #2196f3;
+}
+
+.priority-tag.中 {
+    background-color: #ffc107;
+}
+
+.priority-tag.高 {
+    background-color: #ff9800;
+}
+
+.priority-tag.极高 {
+    background-color: #f44336;
+}
+
+.username-display {
+  padding: 5px;
+  font-size: 17px; 
+  font-weight: bold;
+  color: #333;
+  text-align: left; /* 左对齐 */
+  margin-bottom: 10px; 
+}
+
+
+.time-picker-group {
+    display: flex;  /* 使用flex布局 */
+    align-items: center;  /* 垂直居中对齐 */
+    gap: 10px;  /* 元素间距 */
+}
+
+.time-picker-group label {
+    display: inline-block;  /* 改为行内块元素 */
+    margin-bottom: 0;  /* 移除底部间距 */
+    width: 80px;  /* 固定标签宽度 */
+    white-space: nowrap;  /* 防止标签换行 */
+}
+
+.datetime-range-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;  /* 占据剩余空间 */
+}
+
+.datetime-container {
+    position: relative;
+    flex: 1;
+}
+
+.datetime-container input {
+    width: 100%;
+}
+
+.time-separator {
+    font-size: 16px;
+    color: #666;
+    padding: 0 5px;
+}
+
+.priority-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.priority-btn {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.priority-btn:hover {
+    background-color: #e9e9e9;
+}
+
+.priority-btn.active {
+    color: white;
+    font-weight: bold;
+}
+
+/* 为不同优先级设置不同的激活状态颜色 */
+.priority-btn[data-priority="极低"].active {
+    background-color: #9e9e9e;
+    border-color: #9e9e9e;
+}
+
+.priority-btn[data-priority="低"].active {
+    background-color: #2196f3;
+    border-color: #2196f3;
+}
+
+.priority-btn[data-priority="中"].active {
+    background-color: #ffc107;
+    border-color: #ffc107;
+}
+
+.priority-btn[data-priority="高"].active {
+    background-color: #ff9800;
+    border-color: #ff9800;
+}
+
+.priority-btn[data-priority="极高"].active {
+    background-color: #f44336;
+    border-color: #f44336;
+}
+
+.tags-selector {
+    position: relative;
+    margin-top: 8px;
+    z-index: 1000; /* 增加z-index确保标签选择器在模态框内容之上 */
+}
+
+.selected-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    border: 1px solid #ddd; /* 保持容器边框 */
+    border-radius: 4px;
+    padding: 3px; /* 添加上下左右内边距 */
+    min-height: 34px;
+}
+
+.tag-search-input {
+    flex: 1;
+    border: none !important; /* 强制隐藏输入框边框 */
+    outline: none !important; /* 隐藏聚焦时的轮廓 */
+    padding: 5px;
+    min-width: 100px;
+    background: transparent; /* 确保输入框背景透明 */
+    font-size: 14px; /* 设置字体大小为14px */
+}
+
+.selected-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-right: 5px;
+}
+
+.selected-tag {
+    display: flex;
+    align-items: center;
+    background-color: #e0e0e0;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.selected-tag .remove-tag {
+    margin-left: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.tags-dropdown {
+    margin-top: 2px;
+}
+
+.toggle-tags-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.toggle-icon {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+}
+
+.tags-list {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 5px 10px;
+    margin-top: 2px;
+    max-height: 170px;
+    overflow-y: auto;
+    position: absolute; /* 改为绝对定位 */
+    z-index: 1010; /* 确保下拉列表在模态框内容之上 */
+    background-color: white; /* 确保背景不透明 */
+    width: 100%; /* 与输入框宽度一致 */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15); /* 添加阴影增强层次感 */
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    text-align: center;
+}
+
+.empty-state img {
+    width: 80px;
+    height: 80px;
+    opacity: 0.5; /* 设置为灰色 */
+    margin-bottom: 10px;
+}
+
+.empty-state p {
+    color: #999;
+    font-size: 14px;
+}
+
+.tags-list.hidden {
+    display: none;
+}
+
+.tags-list input[type="checkbox"] {
+    margin-right: 0;  /* 重置右边距 */
+    vertical-align: middle;
+    width: auto;
+}
+
+.tags-list .tag-item {
+    display: flex;
+    align-items: center;
+    padding: 3px 0;
+}
+
+.tags-list .tag-item input[type="checkbox"] {
+    flex-shrink: 0;
+    margin-right: 5px;
+}
+
+.tags-list .tag-item label {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+}
+
+.tags-list .tag-item .tag-color-dot {
+    flex-shrink: 0;
+    margin-right: 5px;
+}
+
+/* 标签颜色圆点样式 */
+.tag-color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-left: 7px !important;  /* 增加勾选框与圆点的间距 */
+    margin-right: 3px;
+    display: inline-block;
+    vertical-align: middle;
+}
+.required-star {
+    color: red;
+    font-size: inherit; /* 继承父元素字体大小 */
+    margin-right: 3px;
+}
+
+.form-group.title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-group.title-group label {
+    display: inline-block;
+    margin-bottom: 0;
+    width: 80px;  /* 设置标签宽度 */
+    white-space: nowrap;
+}
+
+.form-group.title-group input {
+    flex: 1;  /* 输入框占据剩余空间 */
+    font-size: 14px; /* 设置字体大小为14px */
+}
+
+.form-group.tags-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.form-group.tags-group label {
+    display: inline-block;
+    margin-bottom: 0;
+    width: 80px;
+    white-space: nowrap;
+}
+
+.form-group.tags-group .tags-selector {
+    flex: 1; /* 占据剩余空间 */
+    margin-top: 0 !important; /* 覆盖之前的margin-top */
+}
+
+.form-group.notes-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.form-group.notes-group label {
+    display: inline-block;
+    margin-bottom: 0;
+    width: 80px;
+    white-space: nowrap;
+    padding-top: 23px; /* 调整垂直对齐 */
+}
+
+.form-group.notes-group textarea {
+    flex: 1; /* 占据剩余空间 */
+    min-height: 60px; /* 确保有足够的高度 */
+    font-size: 14px; /* 设置字体大小为14px */
+}
+
+.form-group.title-group label,
+.form-group.tags-group label,
+.form-group.notes-group label,
+.form-group.time-picker-group label {
+    text-align: right;
+}
+
+.created-time-group{
+    margin-left:90px;
+    font-size:12px !important;
+}
+
+/* +号按钮样式 */
+.add-category-btn {
+    background-color: #e0e0e0;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 11px;
+}
+
+.add-category-btn:hover {
+    background-color: #bdbdbd;
+}
+
+/* 标签模态框样式 */
+.tag-modal-content {
+    max-width: 400px;
+    width: 80%;
+    left: 50%;
+    transform: translateX(-50%);
+    height: auto;
+    max-height: 80vh;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 8px;
+}
+
+/* 颜色选择器样式 */
+.color-options {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.color-option {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.color-option.selected {
+    border: 2px solid #4a90e2;
+}
+
+
+.context-menu {
+  display: none;
+  position: absolute;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  z-index: 1000;
+  min-width: 60px;
+}
+
+.context-menu-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.context-menu-item:hover {
+  background-color: #f5f5f5;
+}
+
+.menu-icon {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+/* 自定义警告样式 */
+.custom-alert {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 101; /* 确保在其他模态框之上 */
+    justify-content: center;
+    align-items: center;
+}
+
+.custom-alert-content {
+    background-color: white;
+    padding: 25px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px; /* 稍微增大最大宽度 */
+    max-height: 80vh; /* 限制最大高度为视口高度的80% */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+}
+
+#alertMessage {
+    margin-bottom: 20px;
+    font-size: 16px;
+    color: #333;
+    max-height: 60vh; /* 限制消息区域高度 */
+    overflow-y: auto; /* 添加垂直滚动条 */
+    padding-right: 10px; /* 为滚动条预留空间 */
+}
+
+#confirmAlertBtn {
+    background-color: #4a90e2;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+    width: 80px;
+    align-self: center;
+}
+
+#confirmAlertBtn:hover {
+    background-color: #60a5fa;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidebar h2 {
+    font-size: 16px;
+    margin-bottom: 0;
+    margin-top: 0;
+}

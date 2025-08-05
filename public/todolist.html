@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>待办详情</title>
+    <link rel="stylesheet" href="css/todolist.css">
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-fixed">
+                <div id="usernameDisplay" class="username-display"></div>
+                <div class="sidebar-header">
+                    <h2>任务分类</h2>
+                    <button id="addCategoryBtn" class="add-category-btn">+</button>
+                </div>
+            </div>
+            <div class="sidebar-scrollable">
+                <div id="categoryList" class="category-list"></div>
+            </div>
+            <div class="sidebar-bottom">
+                <button id="todayTaskSummaryBtn" class="today-task-summary-btn">今日任务总结</button>
+            </div>
+        </div>
+        <div id="tagContextMenu" class="context-menu">
+            <div class="context-menu-item" id="editTagItem">
+                <img src="../public/pic/edit.png" alt="编辑" class="menu-icon"> 编辑
+            </div>
+            <div class="context-menu-item" id="deleteTagItem">
+                <img src="../public/pic/delete.png" alt="删除" class="menu-icon"> 删除
+            </div>
+        </div>
+        <!-- 添加标签模态框 -->
+        <div id="tagModal" class="modal">
+            <div class="modal-content tag-modal-content">
+                <form id="tagForm">
+                    <div class="form-group">
+                        <label for="tagName"><span class="required-star">*</span>标签名</label>
+                        <input type="text" id="tagName" required>
+                    </div>
+                    <div class="form-group">
+                        <label><span class="required-star">*</span>颜色</label>
+                        <div class="color-options">
+                            <span class="color-option" data-color="#EDD274"></span>
+                            <span class="color-option" data-color="#c8e6c9"></span>
+                            <span class="color-option" data-color="#bbdefb"></span>
+                            <span class="color-option" data-color="#ffcdd2"></span>
+                            <span class="color-option" data-color="#C45850"></span>
+                            <span class="color-option" data-color="#717AC4"></span>
+                            <span class="color-option" data-color="#C47EB2"></span>
+                        </div>
+                        <input type="hidden" id="selectedColor" value="#9e9e9e">
+                    </div>
+                    <div class="button-container">
+                        <button type="button" id="cancelTagBtn" class="btn cancel-btn">取消</button>
+                        <button type="submit" class="btn">确定</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="taskContent" class="task-content">
+            <div class="fixed-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center;">
+                    <h2>任务列表</h2>
+                    <button id="addTaskBtn" class="add-category-btn" style="margin-left: 10px;">+</button>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <div id="remindTimeSetting" style="font-size: 12px; margin-right: 15px;">
+                        提醒时间: <select id="remindTimeSelect">
+                            <option value="15">15分钟</option>
+                            <option value="30">30分钟</option>
+                            <option value="60" selected>1小时</option>
+                            <option value="120">2小时</option>
+                            <option value="240">4小时</option>
+                            <option value="480">8小时</option>
+                            <option value="720">12小时</option>
+                            <option value="1440">24小时</option>
+                        </select>
+                    </div>
+                    <div style="font-size: 12px;">
+                        导出: 
+                        <button id="exportCsvBtn" style="margin-left: 5px; padding: 3px 8px; font-size: 12px;">CSV</button>
+                        <button id="exportJsonBtn" style="margin-left: 5px; padding: 3px 8px; font-size: 12px;">JSON</button>
+                        <span style="margin-left: 10px;">导入:</span>
+                        <input type="file" id="importFile" accept=".csv,.json" style="margin-left: 5px; font-size: 12px; color: transparent; width: 70px">
+                    </div>
+                </div>
+            </div>
+            <div id="taskList" class="task-list"></div>
+        </div>
+    </div>
+
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <form id="taskForm">
+                <div class="form-group title-group">
+                    <label for="taskTitle"><span class="required-star">*</span>任务标题</label>
+                    <input type="text" id="taskTitle" required>
+                </div>
+                <div class="form-group priority-group">
+                    <label>优先级</label>
+                    <div class="priority-buttons">
+                        <button type="button" class="priority-btn" data-priority="极低">极低</button>
+                        <button type="button" class="priority-btn" data-priority="低">低</button>
+                        <button type="button" class="priority-btn active" data-priority="中">中</button>
+                        <button type="button" class="priority-btn" data-priority="高">高</button>
+                        <button type="button" class="priority-btn" data-priority="极高">极高</button>
+                    </div>
+                    <!-- 隐藏的输入框用于存储选中的优先级值 -->
+                    <input type="hidden" id="taskPriority" value="中">
+                </div>
+                 <div class="form-group tags-group">
+                    <label>标签</label>
+                    <div class="tags-selector">
+                        <div class="selected-tags-container">
+                            <div class="selected-tags"></div>
+                            <input type="text" class="tag-search-input" placeholder="添加标签">
+                            <button class="toggle-tags-btn" type="button">
+                                <img src="../public/pic/down.png" alt="展开" class="toggle-icon">
+                            </button>
+                        </div>
+                        <div class="tags-list hidden">
+                            <!-- 清空硬编码标签，将由JavaScript动态生成 -->
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group time-picker-group">
+                    <label>持续时间</label>
+                    <div class="datetime-range-container">
+                        <div class="datetime-container">
+                            <input type="datetime-local" id="taskStartTime">
+                        </div>
+                        <span class="time-separator">-</span>
+                        <div class="datetime-container">
+                            <input type="datetime-local" id="taskEndTime">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group notes-group">
+                    <label for="taskNotes">备注</label>
+                    <textarea id="taskNotes" rows="3"></textarea>
+                </div>
+                <!-- 添加创建时间显示区域 -->
+                <div class="form-group created-time-group">
+                    <span id="createdTimeDisplay"></span>
+                </div>
+                <!-- 添加按钮容器 -->
+                <div class="button-container">
+                    <button type="button" id="cancelTaskBtn" class="btn cancel-btn">取消编辑</button>
+                    <button type="submit" class="btn">保存任务</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- 自定义警告组件 -->
+<div id="customAlert" class="custom-alert">
+    <div class="custom-alert-content">
+        <p id="alertMessage"></p>
+        <button id="confirmAlertBtn" class="btn">确定</button>
+    </div>
+</div>
+    <script src="js/todolist.js"></script>
+</body>
+</html>

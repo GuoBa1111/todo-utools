@@ -1,0 +1,21 @@
+{
+  "name": "任务管理工具",
+  "description": "一个简单的任务管理工具，支持创建、查看、更新和删除任务。",
+  "version": "1.0.0",
+  "author": "Your Name",
+  "logo": "logo.png",
+  "main": "public/todolist.html",
+  "preload": "preload.js",
+  "features": [
+    {
+      "code": "taskManager",
+      "explain": "任务管理",
+      "cmds": ["任务管理", "待办事项"]
+    }
+  ],
+  "permissions": [
+    "notification",
+    "dbStorage",
+    "windowControl"
+  ]
+}
