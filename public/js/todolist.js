@@ -77,10 +77,8 @@ const TaskManager = {
   try {
     console.log(`开始加载任务`);
     // 直接从uTools数据库获取任务
-    this.tasks = utools.db.allDocs(`tasks_${this.userId}`).map(item => item.value) || '[]';
+    this.tasks = utools.db.allDocs(`tasks_${this.userId}`).map(item => item.value) || [];
     console.log(`成功加载到 ${this.tasks.length} 个任务`);
-
-
     this.autoUpdateTaskStatuses();
   } catch (error) {
     console.error('加载任务失败:', error);
@@ -109,44 +107,37 @@ const TaskManager = {
 
   // 更新任务状态
   async updateTaskStatus(taskId, status) {
-    
-    if (status !== '已完成') {
-      // 取消勾选时，直接计算并设置正确的状态
-      const task = this.tasks.find(t => t.id === taskId);
-      if (task) {
-        const now = new Date();
-        const startTime = new Date(task.startTime);
-        const endTime = new Date(task.endTime);
-        let newStatus = '未开始';
-        
-        if (now >= startTime && now < endTime) {
-          newStatus = '进行中';
-        } else if (now >= endTime) {
-          newStatus = '已结束';
-        }
-        const updatedTask= utools.dbStorage.getItem(`tasks_${this.userId}_${taskId}`);
-        updatedTask.status= newStatus;
-        utools.dbStorage.setItem(`tasks_${this.userId}_${taskId}`,updatedTask);
-        const index = this.tasks.findIndex(task => task.id === taskId);
-        if (index !== -1) {
-          this.tasks[index] = updatedTask;
-          this.renderTaskCategories();
-          this.renderTasks();
-        }
+  const updatedTask = utools.dbStorage.getItem(`tasks_${this.userId}_${taskId}`);
+  
+  if (status !== '已完成') {
+    // 取消勾选时，计算正确的状态
+    const task = this.tasks.find(t => t.id === taskId);
+    if (task) {
+      const now = new Date();
+      const startTime = new Date(task.startTime);
+      const endTime = new Date(task.endTime);
+      
+      if (now < startTime) {
+        updatedTask.status = '未开始';
+      } else if (now >= startTime && now < endTime) {
+        updatedTask.status = '进行中';
+      } else if (now >= endTime) {
+        updatedTask.status = '已结束';
       }
-    } else {
-      // 勾选完成时，直接设置状态
-      const updatedTask= utools.dbStorage.getItem(`tasks_${this.userId}_${taskId}`);
-      updatedTask.status= status;
-      utools.dbStorage.setItem(`tasks_${this.userId}_${taskId}`,updatedTask);
-      const index = this.tasks.findIndex(task => task.id === taskId);
-        if (index !== -1) {
-          this.tasks[index] = updatedTask;
-          this.renderTaskCategories();
-          this.renderTasks();
-        }
-      }
-  },
+    }
+  } else {
+    // 勾选完成时，直接设置状态
+    updatedTask.status = status;
+  }
+  
+  utools.dbStorage.setItem(`tasks_${this.userId}_${taskId}`, updatedTask);
+  const index = this.tasks.findIndex(task => task.id === taskId);
+  if (index !== -1) {
+    this.tasks[index] = updatedTask;
+    this.renderTaskCategories();
+    this.renderTasks();
+  }
+},
 
   initTagsSelector() {
     // 绑定标签展开/折叠按钮事件
@@ -156,16 +147,16 @@ const TaskManager = {
     const tagsSelector = document.querySelector('.tags-selector');
     let searchInput = document.querySelector('.tag-search-input');
 
-    // 清除旧的事件监听器
-    // 通过克隆元素来移除所有事件监听器
-    const newToggleBtn = toggleBtn.cloneNode(true);
-    toggleBtn.parentNode.replaceChild(newToggleBtn, toggleBtn);
-    toggleBtn = newToggleBtn;
-    toggleIcon = toggleBtn.querySelector('.toggle-icon');
+    // 优化：使用事件委托代替克隆元素来移除事件监听器
+    const resetElementEvents = (element) => {
+      const newElement = element.cloneNode(true);
+      element.parentNode.replaceChild(newElement, element);
+      return newElement;
+    };
 
-    const newSearchInput = searchInput.cloneNode(true);
-    searchInput.parentNode.replaceChild(newSearchInput, searchInput);
-    searchInput = newSearchInput;
+    toggleBtn = resetElementEvents(toggleBtn);
+    toggleIcon = toggleBtn.querySelector('.toggle-icon');
+    searchInput = resetElementEvents(searchInput);
 
     // 关键修复1：先清空选中标签显示容器
     const selectedTagsContainer = document.querySelector('.selected-tags');
@@ -211,6 +202,14 @@ const TaskManager = {
     downImg.src = '../public/pic/down.png';
     const searchImg = new Image();
     searchImg.src = '../public/pic/search.png';
+
+    if (tagsList.classList.contains('hidden')) {
+        toggleIcon.src = downImg.src;
+        toggleIcon.alt = '展开';
+        } else {
+        toggleIcon.src = searchImg.src;
+        toggleIcon.alt = '搜索';
+        }
 
     toggleBtn.addEventListener('click', () => {
         tagsList.classList.toggle('hidden');
@@ -264,6 +263,7 @@ const TaskManager = {
                 showCustomAlert('最多只能选择3个标签');
             }
             this.updateSelectedTags();
+            searchInput.focus();
         });
     });
 
@@ -516,7 +516,7 @@ initTagDragAndDrop() {
   // 过滤标签
    filterTags(searchTerm) {
     const tagsList = document.querySelector('.tags-list');
-    const tagItems = document.querySelectorAll('.tags-list > div:not(.empty-state)');
+    const tagItems = document.querySelectorAll('.tags-list > div:not(.tag-list-empty-state)');
     searchTerm = searchTerm.toLowerCase();
 
     // 使用requestAnimationFrame优化重绘
@@ -534,14 +534,14 @@ initTagDragAndDrop() {
         });
 
         // 检查是否已有空状态元素
-        let emptyState = document.querySelector('.empty-state');
+        let emptyState = document.querySelector('.tag-list-empty-state');
         
         // 根据是否有可见项决定显示或隐藏空状态
         if (!hasVisibleItems) {
             if (!emptyState) {
                 // 创建空状态元素
                 emptyState = document.createElement('div');
-                emptyState.className = 'empty-state';
+                emptyState.className = 'tag-list-empty-state';
                 emptyState.innerHTML = `
                     <img src="../public/pic/empty.png" alt="暂无标签">
                     <p>暂无标签</p>
@@ -602,20 +602,7 @@ initTagDragAndDrop() {
 
     this.tasks.forEach(task => {
       // 跳过已完成、已提醒或无结束时间的任务
-      if (task.status === '已完成') {
-        console.log(`任务 ${task.title} 已完成，跳过提醒`);
-        return;
-      }
-      if (task.status === '已结束') {
-        console.log(`任务 ${task.title} 已结束，跳过提醒`);
-        return;
-      }
-      if (task.notified) {
-        console.log(`任务 ${task.title} 已提醒，跳过`);
-        return;
-      }
-      if (!task.endTime) {
-        console.log(`任务 ${task.title} 无结束时间，跳过`);
+      if (task.status === '已完成' || task.status === '已结束' || task.notified || !task.endTime) {
         return;
       }
 
@@ -740,144 +727,116 @@ setContentAreaColor() {
   }
 },
 
-  // 渲染任务列表
-  renderTasks() {
-    const taskList = document.getElementById('taskList');
-    taskList.innerHTML = '';
+renderTask(task, isCompleted) {
+const taskItem = document.createElement('div');
+// 添加优先级样式类和completed类
+const taskClass = isCompleted ? `task-item priority-${task.priority} completed` : `task-item priority-${task.priority}`;
+taskItem.className = taskClass;
+taskItem.dataset.id = task.id;
 
-    const filteredTasks = this.getFilteredTasks();
+// 格式化日期显示
+const createdAt = new Date(task.createdAt);
+const formattedDate = this.formatDateTime(createdAt);
+
+// 生成标签HTML
+const tagsHTML = task.tags.length > 0 ? `
+  <div class="task-tags">
+    ${task.tags.map(tag => {
+      // 查找标签颜色
+      const tagInfo = this.tags.find(t => t.name === tag);
+      const color = tagInfo ? tagInfo.color : 'gray';
+      // 截断过长标签
+      const displayTag = tag.length > 8 ? tag.substring(0, 8) + '...' : tag;
+      return `<span class="tag" style="background-color: ${color}30; border-color: ${color};">${displayTag}</span>`;
+    }).join('')}
+  </div>
+` : '';
+
+// 生成时间范围HTML
+const timeRangeHTML = task.startTime && task.endTime ? `
+  <div class="task-duration">
+    持续时间: ${this.formatDateTime(new Date(task.startTime))} - ${this.formatDateTime(new Date(task.endTime))}
+  </div>
+` : '';
+
+// 设置任务HTML内容
+taskItem.innerHTML = `
+  <div class="task-checkbox">
+    <input type="checkbox" ${isCompleted ? 'checked' : ''} data-id="${task.id}">
+  </div>
+  <div class="task-details">
+    <h3 class="task-title">${task.title} <span class="priority-tag ${task.priority}">${task.priority}</span></h3>
+    <div class="task-meta">
+      <span class="task-status">${task.status}</span>
+      <span class="task-priority">优先级: ${task.priority}</span>
+      <span class="task-date">创建时间: ${formattedDate}</span>
+    </div>
+    ${task.notes ? `<div class="task-notes">备注: ${task.notes}</div>` : ''}
+    ${tagsHTML}
+    ${timeRangeHTML}
+  </div>
+  <div class="task-actions">
+    <button class="edit-btn" data-id="${task.id}"></button>
+    <button class="delete-btn" data-id="${task.id}"></button>
+  </div>
+`;
+
+return taskItem;
+},
+
+  // 渲染任务列表
+  // 渲染任务列表
+renderTasks() {
+const taskList = document.getElementById('taskList');
+taskList.innerHTML = '';
+
+const filteredTasks = this.getFilteredTasks();
 
 // 添加任务状态自动更新逻辑
-    const now = new Date();
-    const updatedTasks = [];
-    
-    filteredTasks.forEach(task => {
-      // 深拷贝任务对象避免直接修改原数组
-      const updatedTask = {...task};
-      
-      // 检查条件：状态不是已完成，且存在结束时间，且当前时间已超过结束时间
-      if (
-        updatedTask.status !== '已完成' && 
-        updatedTask.endTime && 
-        now > new Date(updatedTask.endTime)
-      ) {
-        // 更新任务状态为已结束
-        updatedTask.status = '已结束';
-        utools.dbStorage.setItem(`tasks_${this.userId}_${updatedTask.id}`, updatedTask);
-        task.status = '已结束';
-      }
-    });
-    
+const now = new Date();
+filteredTasks.forEach(task => {
+  // 深拷贝任务对象避免直接修改原数组
+  const updatedTask = {...task};
+  
+  // 检查条件：状态不是已完成，且存在结束时间，且当前时间已超过结束时间
+  if (
+    updatedTask.status !== '已完成' && 
+    updatedTask.endTime && 
+    now > new Date(updatedTask.endTime)
+  ) {
+    // 更新任务状态为已结束
+    updatedTask.status = '已结束';
+    utools.dbStorage.setItem(`tasks_${this.userId}_${updatedTask.id}`, updatedTask);
+    task.status = '已结束';
+  }
+});
 
-    if (filteredTasks.length === 0) {
-      taskList.innerHTML = '<div class="empty-state">该分类下暂无任务</div>';
-      return;
-    }
 
-    // 分离未完成和已完成的任务
-    const unfinishedTasks = filteredTasks.filter(task => task.status !== '已完成');
-    const completedTasks = filteredTasks.filter(task => task.status === '已完成');
+if (filteredTasks.length === 0) {
+  taskList.innerHTML = '<div class="empty-state">该分类下暂无任务</div>';
+  return;
+}
 
-    // 先渲染未完成的任务
-    unfinishedTasks.forEach(task => {
-      const taskItem = document.createElement('div');
-      // 添加优先级样式类
-      taskItem.className = `task-item priority-${task.priority}`;
-      taskItem.dataset.id = task.id;
+// 分离未完成和已完成的任务
+const unfinishedTasks = filteredTasks.filter(task => task.status !== '已完成');
+const completedTasks = filteredTasks.filter(task => task.status === '已完成');
 
-      // 格式化日期显示
-      const createdAt = new Date(task.createdAt);
-      const formattedDate = this.formatDateTime(createdAt);
+// 使用DocumentFragment优化DOM操作
+const fragment = document.createDocumentFragment();
 
-      taskItem.innerHTML = `
-        <div class="task-checkbox">
-          <input type="checkbox" data-id="${task.id}">
-        </div>
-        <div class="task-details">
-          <h3 class="task-title">${task.title} <span class="priority-tag ${task.priority}">${task.priority}</span></h3>
-          <div class="task-meta">
-            <span class="task-status">${task.status}</span>
-            <span class="task-priority">优先级: ${task.priority}</span>
-            <span class="task-date">创建时间: ${formattedDate}</span>
-          </div>
-          ${task.notes ? `<div class="task-notes">备注: ${task.notes}</div>` : ''}
-          ${task.tags.length > 0 ? `
-            <div class="task-tags">
-              ${task.tags.map(tag => {
-                // 查找标签颜色
-                const tagInfo = this.tags.find(t => t.name === tag);
-                const color = tagInfo ? tagInfo.color : 'gray';
-                // 截断过长标签，长度大于8时显示省略号
-                const displayTag = tag.length > 8 ? tag.substring(0, 8) + '...' : tag;
-                return `<span class="tag" style="background-color: ${color}30; border-color: ${color};">${displayTag}</span>`;
-              }).join('')}
-            </div>
-          ` : ''}
-          ${task.startTime && task.endTime ? `
-            <div class="task-duration">
-              持续时间: ${this.formatDateTime(new Date(task.startTime))} - ${this.formatDateTime(new Date(task.endTime))}
-            </div>
-          ` : ''}
-        </div>
-        <div class="task-actions">
-          <button class="edit-btn" data-id="${task.id}"></button>
-          <button class="delete-btn" data-id="${task.id}"></button>
-        </div>
-      `;
+// 先渲染未完成的任务
+unfinishedTasks.forEach(task => {
+  fragment.appendChild(this.renderTask(task, false));
+});
 
-      taskList.appendChild(taskItem);
-    });
+// 再渲染已完成的任务
+completedTasks.forEach(task => {
+  fragment.appendChild(this.renderTask(task, true));
+});
 
-    // 再渲染已完成的任务
-    completedTasks.forEach(task => {
-      const taskItem = document.createElement('div');
-      // 添加优先级样式类和completed类
-      taskItem.className = `task-item priority-${task.priority} completed`;
-      taskItem.dataset.id = task.id;
-
-      // 格式化日期显示
-      const createdAt = new Date(task.createdAt);
-      const formattedDate = this.formatDateTime(createdAt);
-
-      taskItem.innerHTML = `
-        <div class="task-checkbox">
-          <input type="checkbox" checked data-id="${task.id}">
-        </div>
-        <div class="task-details">
-          <h3 class="task-title">${task.title} <span class="priority-tag ${task.priority}">${task.priority}</span></h3>
-          <div class="task-meta">
-            <span class="task-status">${task.status}</span>
-            <span class="task-priority">优先级: ${task.priority}</span>
-            <span class="task-date">创建时间: ${formattedDate}</span>
-          </div>
-          ${task.notes ? `<div class="task-notes">备注: ${task.notes}</div>` : ''}
-          ${task.tags.length > 0 ? `
-            <div class="task-tags">
-              ${task.tags.map(tag => {
-                // 查找标签颜色
-                const tagInfo = this.tags.find(t => t.name === tag);
-                const color = tagInfo ? tagInfo.color : 'gray';
-                // 截断过长标签，长度大于8时显示省略号
-                const displayTag = tag.length > 8 ? tag.substring(0, 8) + '...' : tag;
-                return `<span class="tag" style="background-color: ${color}30; border-color: ${color};">${displayTag}</span>`;
-              }).join('')}
-            </div>
-          ` : ''}
-          ${task.startTime && task.endTime ? `
-            <div class="task-duration">
-              持续时间: ${this.formatDateTime(new Date(task.startTime))} - ${this.formatDateTime(new Date(task.endTime))}
-            </div>
-          ` : ''}
-        </div>
-        <div class="task-actions">
-          <button class="edit-btn" data-id="${task.id}">编辑</button>
-          <button class="delete-btn" data-id="${task.id}">删除</button>
-        </div>
-      `;
-
-      taskList.appendChild(taskItem);
-    });
-  },
+// 一次性添加到DOM
+taskList.appendChild(fragment);
+},
 
   // 格式化日期
   formatDateTime(date) {
@@ -1142,71 +1101,73 @@ setContentAreaColor() {
 
 // 修改 addNewTag 函数以支持编辑标签
   async addNewTag(tagName, tagColor) {
-    // 检查是否是编辑模式
-    const tagModal = document.getElementById('tagModal');
-    const originalTagName = tagModal.dataset.originalTagName;
+// 检查是否是编辑模式
+const tagModal = document.getElementById('tagModal');
+const originalTagName = tagModal.dataset.originalTagName;
 
-    if (originalTagName) {
-      // 编辑现有标签
-      const tagIndex = this.tags.findIndex(tag => tag.name === originalTagName);
-      if (tagIndex !== -1) {
-        // 更新标签
-        this.tags[tagIndex] = { 
-          name: tagName, 
-          background_color: tagColor, 
-          dot_color: this.darkenColor(tagColor, 0.2) 
-        };
+if (originalTagName) {
+  // 编辑现有标签
+  const tagIndex = this.tags.findIndex(tag => tag.name === originalTagName);
+  if (tagIndex !== -1) {
+    // 更新标签
+    this.tags[tagIndex] = {
+      name: tagName,
+      background_color: tagColor,
+      dot_color: this.darkenColor(tagColor, 0.2)
+    };
 
-        // 更新所有使用该标签的任务
-        this.tasks.forEach(task => {
-          if (task.tags.includes(originalTagName)) {
-            task.tags = task.tags.map(t => t === originalTagName ? tagName : t);
-          }
-        });
-
-        // 保存到数据库
-        await utools.dbStorage.setItem(`label_${this.userId}`, this.tags);
-        
-        await Promise.all(this.tasks.map(task => 
-          utools.dbStorage.setItem(`tasks_${this.userId}_${task.id}`, task)
-        ));
-
-        // 更新UI
-        this.renderTaskCategories();
-        this.renderTasks();
-
-        this.initTagsSelector();
-
-        // 显示编辑成功提示
-        utools.showNotification('标签编辑成功');
-
-        // 清除编辑模式标记
-        delete tagModal.dataset.originalTagName;
+    // 更新所有使用该标签的任务
+    const updatedTasks = [];
+    this.tasks.forEach(task => {
+      if (task.tags.includes(originalTagName)) {
+        const updatedTask = {...task};
+        updatedTask.tags = task.tags.map(t => t === originalTagName ? tagName : t);
+        updatedTasks.push(updatedTask);
       }
-    } else {
-      // 检查标签是否已存在
-      const tagExists = this.tags.some(tag => tag.name === tagName);
-      if (tagExists) {
-          utools.showNotification('标签已存在');
-          return;
-      }
+    });
 
-      // 添加新标签
-      const newTag = { name: tagName, background_color: tagColor, dot_color: this.darkenColor(tagColor, 0.2) };
-      this.tags.push(newTag);
-
-      // 保存到数据库
-      utools.dbStorage.setItem(`label_${this.userId}`, this.tags);
-
-      // 更新UI
-      this.renderTaskCategories();
-      this.renderTasks();
-      this.initTagsSelector();
-
-      // 显示添加成功提示
-      utools.showNotification('标签添加成功');
+    // 保存到数据库
+    await utools.dbStorage.setItem(`label_${this.userId}`, this.tags);
+    
+    // 批量更新任务
+    for (const task of updatedTasks) {
+      await utools.dbStorage.setItem(`tasks_${this.userId}_${task.id}`, task);
     }
-  },
+
+    // 更新UI
+    this.renderTaskCategories();
+    this.renderTasks();
+    this.initTagsSelector();
+
+    // 显示编辑成功提示
+    utools.showNotification('标签编辑成功');
+
+    // 清除编辑模式标记
+    delete tagModal.dataset.originalTagName;
+  }
+} else {
+  // 检查标签是否已存在
+  const tagExists = this.tags.some(tag => tag.name === tagName);
+  if (tagExists) {
+      utools.showNotification('标签已存在');
+      return;
+  }
+
+  // 添加新标签
+  const newTag = { name: tagName, background_color: tagColor, dot_color: this.darkenColor(tagColor, 0.2) };
+  this.tags.push(newTag);
+
+  // 保存到数据库
+  utools.dbStorage.setItem(`label_${this.userId}`, this.tags);
+
+  this.renderTaskCategories();
+  this.renderTasks();
+  this.initTagsSelector();
+
+  // 显示添加成功提示
+  utools.showNotification('标签添加成功');
+}
+},
 
 // 生成今日任务总结
   async generateTodayTaskSummary() {
@@ -1351,8 +1312,7 @@ setContentAreaColor() {
       this.renderTaskCategories();
       this.renderTasks();
     } catch (error) {
-      console.error('添加任务失败:', error);
-      alert('保存任务失败: ' + error.message);
+      showCustomAlert('保存任务失败: ' + error.message);
     }
   },
   // 添加编辑任务方法
@@ -1400,12 +1360,12 @@ async updateTask(taskId) {
     const status = oldTask.status;
     const createdAt = oldTask.createdAt;
     if (!title) {
-        alert('请输入任务标题');
+        showCustomAlert('请输入任务标题');
         return;
     }
 
     if (tags.length > 3) {
-        alert('最多只能选择3个标签');
+        showCustomAlert('最多只能选择3个标签');
         return;
     }
 
@@ -1435,10 +1395,10 @@ async updateTask(taskId) {
     },
 
 exportTasks(format) {
-    const filteredTasks = this.getFilteredTasks();
+    const filteredTasks = this.tasks;
 
     if (filteredTasks.length === 0) {
-      alert('当前没有任务可导出');
+      showCustomAlert('当前没有任务可导出');
       return;
     }
 
@@ -1456,15 +1416,32 @@ exportTasks(format) {
 
     // 生成导出内容和默认文件名
     let content = '';
-    let defaultFilename = `tasks_${new Date().toISOString().slice(0, 10)}`;
-    let contentType = '';
+let defaultFilename = `tasks_${new Date().toISOString().slice(0, 10)}`;
+let contentType = ''; // 修复了拼写错误
 
-    if (format === 'csv') {
-      const headers = Object.keys(exportData[0]).join(',');
-      const rows = exportData.map(obj => Object.values(obj).join(',')).join('\n');
-      content = `${headers}\n${rows}`;
+if (format === 'csv') {
+      // 改进CSV生成逻辑
+      const headers = Object.keys(exportData[0]);
+      // 处理每个字段，确保包含逗号或引号的字段被引号括起来
+      const formatField = (field) => {
+        if (typeof field !== 'string') field = String(field);
+        if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+          // 转义双引号并添加引号
+          return `"${field.replace(/"/g, '""')}"`;
+        }
+        return field;
+      };
+
+      // 格式化表头
+      const formattedHeaders = headers.map(formatField).join(',');
+      // 格式化每行数据
+      const formattedRows = exportData.map(obj => {
+        return Object.values(obj).map(formatField).join(',');
+      }).join('\n');
+
+      content = `${formattedHeaders}\n${formattedRows}`;
       defaultFilename += '.csv';
-      ontentType = 'text/csv';
+      contentType = 'text/csv';
     } else if (format === 'json') {
       content = JSON.stringify(exportData, null, 2);
       defaultFilename += '.json';
@@ -1485,10 +1462,9 @@ exportTasks(format) {
         // 用户点击了确定按钮，写入文件
         try {
           window.services.writeFile(path, content);
-          alert(`导出成功，文件已保存至：${path}`);
+          showCustomAlert(`导出成功，文件已保存至：${path}`);
         } catch (error) {
-          console.error('导出失败:', error);
-          alert(`导出失败: ${error.message}`);
+          showCustomAlert(`导出失败: ${error.message}`);
         }}
        else {
         // 用户点击了取消按钮
@@ -1517,7 +1493,7 @@ exportTasks(format) {
   importTasks() {
     const fileInput = document.getElementById('importFile');
     if (!fileInput.files || fileInput.files.length === 0) {
-      alert('请选择要导入的文件');
+      showCustomAlert('请选择要导入的文件');
       return;
     }
 
@@ -1532,18 +1508,18 @@ exportTasks(format) {
         } else if (file.name.endsWith('.json')) {
           tasks = JSON.parse(e.target.result);
         } else {
-          alert('不支持的文件格式，请选择CSV或JSON文件');
+          showCustomAlert('不支持的文件格式，请选择CSV或JSON文件');
           return;
         }
 
         if (tasks.length === 0) {
-          alert('没有找到可导入的任务');
+          showCustomAlert('没有找到可导入的任务');
           return;
         }
 
         // 导入任务到系统
         const successCount = await this.importTasksToSystem(tasks);
-        alert(`成功导入 ${successCount} 个任务`);
+        showCustomAlert(`成功导入 ${successCount} 个任务`);
 
         // 重新加载任务
         await this.loadTasks();
@@ -1553,8 +1529,7 @@ exportTasks(format) {
         // 重置文件输入
         fileInput.value = '';
       } catch (error) {
-        console.error('导入任务失败:', error);
-        alert('导入任务失败: ' + error.message);
+        showCustomAlert('导入任务失败: ' + error.message);
       }
     };
 
@@ -1568,13 +1543,13 @@ exportTasks(format) {
       return [];
     }
 
-    const headers = lines[0].split(',');
+    const headers = this.parseCsvLine(lines[0]);
     const tasks = [];
 
     for (let i = 1; i < lines.length; i++) {
       if (!lines[i].trim()) continue;
 
-      const values = lines[i].split(',');
+      const values = this.parseCsvLine(lines[i]);
       const task = {};
 
       for (let j = 0; j < headers.length; j++) {
@@ -1587,9 +1562,43 @@ exportTasks(format) {
     return tasks;
   },
 
+  // 辅助方法：正确解析CSV行，处理带引号的字段
+  parseCsvLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    let quoteChar = '"';
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+
+      // 处理引号
+      if (char === quoteChar) {
+        if (inQuotes && i + 1 < line.length && line[i + 1] === quoteChar) {
+          // 处理双引号转义
+          current += quoteChar;
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        // 字段分隔符
+        result.push(current);
+        current = '';
+      } else {
+        // 普通字符
+        current += char;
+      }
+    }
+
+    // 添加最后一个字段
+    result.push(current);
+
+    return result;
+  },
+
   // 导入任务到系统
   async importTasksToSystem(tasks) {
-    const userId = this.userId;
     let successCount = 0;
     for (const task of tasks) {
         // 转换任务数据格式

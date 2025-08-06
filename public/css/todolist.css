@@ -301,6 +301,11 @@
     padding: 0;
 }
 
+/* 鼠标悬停时放大按钮 */
+.edit-btn:hover, .delete-btn:hover {
+    transform: scale(1.2);
+}
+
 .edit-btn {
     background-image: url('../pic/edit.png');
 }
@@ -685,7 +690,7 @@
     box-shadow: 0 4px 8px rgba(0,0,0,0.15); /* 添加阴影增强层次感 */
 }
 
-.empty-state {
+.tag-list-empty-state {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -694,14 +699,14 @@
     text-align: center;
 }
 
-.empty-state img {
+.tag-list-empty-state img {
     width: 80px;
     height: 80px;
     opacity: 0.5; /* 设置为灰色 */
     margin-bottom: 10px;
 }
 
-.empty-state p {
+.tag-list-empty-state p {
     color: #999;
     font-size: 14px;
 }
@@ -725,6 +730,7 @@
 .tags-list .tag-item input[type="checkbox"] {
     flex-shrink: 0;
     margin-right: 5px;
+    margin-top: 6px;
 }
 
 .tags-list .tag-item label {
@@ -784,7 +790,7 @@
 
 .form-group.tags-group label {
     display: inline-block;
-    margin-bottom: 0;
+    margin-top: 9px;
     width: 80px;
     white-space: nowrap;
 }

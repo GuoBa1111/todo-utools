@@ -10,7 +10,7 @@
     {
       "code": "taskManager",
       "explain": "任务管理",
-      "cmds": ["任务管理", "待办事项"]
+      "cmds": ["待办事项"]
     }
   ],
   "permissions": [
