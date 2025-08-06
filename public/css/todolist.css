@@ -3,6 +3,17 @@
     padding: 0;
     box-sizing: border-box;
     font-family: 'Arial', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+input, textarea, select {
+    user-select: auto;
+    -webkit-user-select: auto;
+    -moz-user-select: auto;
+    -ms-user-select: auto;
 }
 
 .app-container {
@@ -83,15 +94,6 @@
   opacity: 0.5;
   background-color: #e0e0e0;
   border: 1px dashed #999;
-}
-
-.category-item.dragging-ready {
-  cursor: grab;
-}
-
-.category-item.dragging-ready:active,
-.category-item.dragging {
-  cursor: grabbing;
 }
 
 .category-item {
