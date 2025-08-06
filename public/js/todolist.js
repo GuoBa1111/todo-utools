@@ -874,15 +874,23 @@ taskList.appendChild(fragment);
     this.initTagsSelector();
 
     document.querySelectorAll('.priority-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        // 移除所有按钮的active类
-        document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
-        // 为当前点击的按钮添加active类
-        e.target.classList.add('active');
-        // 更新隐藏输入框的值
-        document.getElementById('taskPriority').value = e.target.dataset.priority;
+      btn.addEventListener('click', (e) => {
+          // 移除所有按钮的active类
+          document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
+          // 为当前点击的按钮添加active类
+          e.target.classList.add('active');
+          // 更新隐藏输入框的值
+          document.getElementById('taskPriority').value = e.target.dataset.priority;
+      });
     });
-});
+
+    // 添加任务列表空白区域双击事件监听器
+    document.getElementById('taskContent').addEventListener('dblclick', (e) => {
+      // 确保点击的是taskContent区域或taskList区域，而不是其中的任务项、按钮或其他交互元素
+      if (e.target.id === 'taskContent' || e.target.id === 'taskList') {
+        this.showAddTaskModal();
+      }
+    });
 
     document.getElementById('importFile').addEventListener('change', () => {
       this.importTasks();
